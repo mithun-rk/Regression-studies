@@ -1,0 +1,222 @@
+---
+title: "Music Album Sales Prediction (A case of linear regression)"
+author: "Mithun Radhakrishnan"
+date: "13 April 2018"
+output: html_document
+---
+#**Background**  
+
+*Imagine that you worked for a Musice Records company and that your boss is interested in predicting album sales from Adverting. Some requisite historical data is provided for your use.*  
+
+**Lets read the historical data**  
+
+```{r}
+albumsales1<- read.csv("AlbumSales1.csv",header = TRUE)
+```
+
+**Some Summaries**
+```{r}
+dim(albumsales1)
+summary(albumsales1)
+head(albumsales1,10)
+```
+
+* The data consists of 2 variables i.e. 1) Adverts and 2) Sales.
+
+* Both adverts and sales are to be expressed in 1,000's.
+
+* There are 200 hundred observations of each.
+
+* Data is pristine, with no missing values. 
+
+```{r,echo=FALSE,,message=FALSE}
+library(tidyverse)
+```
+
+```{r}
+ggplot(albumsales1,aes(adverts,sales))+
+  geom_smooth(se=FALSE)+
+  labs(
+    title= paste("Sales should ideally go up with increased adverts")
+  )
+```
+
+##** Lets build a Single variable linear model**
+
+*Linear Regression is called by lm() function. This function takes the general form of*  
+
+**model<- lm(outcome ~ predictor(s), data = dataframe, na.action = an na action)**
+
+```{r}
+model1<- lm(albumsales1$sales~albumsales1$adverts)
+```
+
+```{r}
+summary(model1)
+```
+
+**Interpretation**  
+
+The Multiple R-squared is a measure of overll fit of the model.The logic behind R^2 is that in absence of a predictor variable (here adverts), the best model to base prediction would be the mean of sales. R-squared measures how much of this total error variation is explained by the new regression model.  
+
+Here in this model R-squared value stands at 0.33.  
+
+There might be many factors that can explain this variation, but this model which includes only advertising expenditure can explain approxmately 33% or it. What it also means that 67% of the variation in album sales cannot be explained by advertising alone.   
+
+We also see an F ratio of 99.59 with a p-value less than 0.1% it mean that the null hypthesis about the regression parameters b1=0 does not hold ground. The model predicts the album sales signigicantly better than the mean value of album sales.  
+
+**Lets look at the coefficients**
+```{r}
+coefficients(model1)
+confint(model1)
+```
+
+b0 is the y intercept, here it is 134.1 and this is interpreted as when no money is spent on advertising (when x = 0) the model predicts that 134100 albums wil be sold.  
+
+b1 can be seen from the row labeled adverts and this value represents the slope or gradient of the regression line. Here in this case, it is 0.096. This should be understood as the change in outcome associated with a unit change in predictor variable. Again here the predictor variable is adverts and the unit is in 1000's so a 1000 increase in adverts $1000*0.096$ chnage in the number of album sales.  
+
+The model looks some thing like this:  
+
+** albumsales = 134.14 + (0.096 Adverts budget)**
+
+*This was a case of single continous varible predicting another, meaning Advert budget used to predict album sales. 
+
+##**Now let's build a Multiple variable linear regression model** 
+
+*Some changes in the background, the music records company executive wants you to incorporate other variables as well in the model for prediction of sales.*  
+
+**Let's read the data with new variables**  
+
+```{r}
+albumsales2<- read.csv("AlbumSales2.csv", header = TRUE)
+```
+
+**Some Summaries**
+```{r}
+dim(albumsales2)
+head(albumsales2)
+summary(albumsales2)
+```
+
+**Some Observation Points** 
+
+* There are 2 new variables:
+
++ 1. airplay- the number of times songs from album are played in radio  
+
++ 2. attract - the attactiveness of the band on a scale of 0 to 10.  
+
+*Let's make some graphs*
+```{r, message=FALSE}
+par(mfrow = c(1,3))
+ggplot(albumsales2,aes(adverts,sales))+
+  geom_smooth(se=FALSE)+
+  labs(
+    title= paste("Sales should ideally go up with increased adverts")
+  )
+ggplot(albumsales2, aes(airplay,sales))+
+  geom_smooth(se=FALSE)+
+  labs(
+    title = paste("Sales should have a positive relationship with airplay")
+  )
+ggplot(albumsales2, aes(attract,sales))+
+  geom_smooth(se = FALSE)+
+  labs(
+    title = paste("Attractiveness is measured by a survey which rates the band higher better")
+  )
+```
+
+**Building the Multiple Regression Model**
+
+```{r}
+model2<- lm(albumsales2$sales~albumsales2$adverts+albumsales2$airplay+albumsales2$attract)
+summary(model2)
+```
+**Interpretation**
+
+*R-squared is 0.66, this model explains variation better than model1.
+
+* F-statistic is signicant, so the null of zero beta values gets rejected.  
+
+*Lets check the Coefficients of the model
+```{r}
+coefficients(model2)
+confint(model2)
+```
+
+* Adverts b-value is 0.0848 means that if the adverts budget increase by 1 unit (here 1000 dolar), record sales increase by  1000*0.0848 = 84.8 units  other things remaining the same.  
+
+* Airplay b-value is 3.36 means if airplay incrase by 1 unit there is a 3.36 thousand increase in sales of album.  
+
+* Attract b-value 11. 086 means for every one unit increase in the attractiveness of the band we can expect 11.086 thousand increase in album sales.   
+
+*The b-values and thier significance are important statistics to look at however standardized values of b are more easy to interpret. (because they are not dependent on the units of measurement of the variables.)*
+
+** To obtain standardized estimates of beta use lm.beta() function**
+
+```{r, message= FALSE}
+library(QuantPsyc)
+lm.beta(model2)
+```
+*Interpretation* 
+If adverts increases by one standard deviation (past), the sales increase by 0.51 standard deviation. If airplay increase by one standard deviation the album sales increase by 0.5119 standard deviation and lastly if the attractive ness of band increases by one standard deviation the sales incease of by 0.19 standard deviation of sales. 
+
+** Comparing Models**
+
+Since the models are coming from 2 different data sets, R wont be able to compare. Lets create one more model which model 1 only but its coming from the second dataframe. 
+
+```{r}
+model3<- lm(albumsales2$sales~albumsales2$adverts)
+```
+
+** Assessing Model improvement**
+
+*If we have done a heirarchial regression, then you can assess the improverment of the model at each stage of the analysis by looking at the change in R-squared and testing whether this change is signigicant using ANNOVA*
+
+```{r}
+anova(model3,model2)
+```
+* So we have an F ratio of 96.44 with a very low p-value which indicate that model 2 is a significantly improved fit compared to model 3. 
+
+## Diagnostics (outliers and influential cases)  
+
+**Residuals or the error tell a lot about whether the underlying assumptions of linear regression are met or not**  
+* Calculating standardized residuals.  
+
+* Calculating cooks distance. 
+```{r}
+model2$standardized.residual<- rstandard(model2)
+model2$cooksdistance<- cooks.distance(model2)
+```
+
+* Converting into a table
+```{r}
+write.table(model2,"Album sales with diagnostic.csv", sep = ",", row.names = FALSE)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
